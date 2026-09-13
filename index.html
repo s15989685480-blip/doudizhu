@@ -32,7 +32,7 @@ html,body{
   position:absolute;pointer-events:none;
   border-radius:50%;filter:blur(2px);
 }
-/* 卡牌样式+弹性落地动画 */
+/* 手牌 */
 .card{
   width:72px;height:104px;border-radius:8px;
   background:#fff;position:absolute;
@@ -56,10 +56,10 @@ html,body{
   background:linear-gradient(135deg,#194b91,#0f2b52);
   border:2px solid #ffd70088;
 }
-/* 桌面打出的牌 */
+/* 桌面打出的牌：尺寸稍大 */
 .card-out{
-  width:54px;height:78px;border-radius:6px;background:#fff;
-  position:absolute;box-shadow:0 2px 8px #0007;
+  width:64px;height:92px;border-radius:7px;background:#fff;
+  position:absolute;box-shadow:0 3px 10px #0007;
   pointer-events:none;
 }
 /* 金币掉落特效 */
@@ -207,7 +207,7 @@ html,body{
 </div>
 
 <script>
-// ========= 音频管理器，解决浏览器自动播放限制，独立音效、人声播报、静音本地记忆 =========
+// ========= 音频管理器 =========
 const AudioMgr = {
   muted:false,
   ctx:null,
@@ -215,7 +215,6 @@ const AudioMgr = {
     const saveMute = localStorage.getItem("ddz_muted");
     if(saveMute!==null) this.muted = saveMute==="1";
     document.querySelector("#muteBtn").innerText = this.muted?"🔇静音":"🔊音效";
-    // 用户任意点击后初始化AudioContext，绕过自动播放拦截
     document.body.addEventListener("click",()=>{
       if(!this.ctx){
         this.ctx = new (window.AudioContext||window.webkitAudioContext)();
@@ -234,22 +233,22 @@ const AudioMgr = {
     osc.connect(gain);gain.connect(this.ctx.destination);
     const now = this.ctx.currentTime;
     switch(type){
-      case "deal": //发牌
+      case "deal":
         osc.type="square";osc.frequency.setValueAtTime(440,now);
         gain.gain.setValueAtTime(0.08,now);gain.gain.exponentialRampToValueAtTime(0.001,now+0.12);
         osc.start(now);osc.stop(now+0.12);
       break;
-      case "flip": //翻牌
+      case "flip":
         osc.type="sine";osc.frequency.setValueAtTime(620,now);
         gain.gain.setValueAtTime(0.07,now);gain.gain.exponentialRampToValueAtTime(0.001,now+0.18);
         osc.start(now);osc.stop(now+0.18);
       break;
-      case "chip": //筹码下注
+      case "chip":
         osc.type="triangle";osc.frequency.setValueAtTime(880,now);
         gain.gain.setValueAtTime(0.09,now);gain.gain.exponentialRampToValueAtTime(0.001,now+0.2);
         osc.start(now);osc.stop(now+0.2);
       break;
-      case "click": //普通点击
+      case "click":
         osc.type="sine";osc.frequency.setValueAtTime(520,now);
         gain.gain.setValueAtTime(0.06,now);gain.gain.exponentialRampToValueAtTime(0.001,now+0.08);
         osc.start(now);osc.stop(now+0.08);
@@ -277,7 +276,7 @@ const AudioMgr = {
   }
 };
 
-// ========= 粒子系统 豪华桌布光影粒子 =========
+// ========= 粒子系统 =========
 const ParticleSys = {
   el:null,
   init(dom){
@@ -303,7 +302,7 @@ const ParticleSys = {
   }
 };
 
-// ========= 金币掉落动画特效 =========
+// ========= 金币掉落动画 =========
 function createCoinEffect(x,y,isWin,num){
   const wrap = document.querySelector("#gameArea");
   for(let i=0;i<6;i++){
@@ -333,7 +332,6 @@ const UserData = {
       this.dailyGetTime = obj.dailyGetTime||0;
       this.record = obj.record||{win:0,lose:0,total:0};
     }else{
-      //新建账号初始金币
       this.user = name;
       this.gold = 500000;
       this.dailyGetTime = 0;
@@ -369,7 +367,6 @@ const UserData = {
   refreshUI(){
     document.querySelector("#showUser").innerText = this.user||"";
     document.querySelector("#showGold").innerText = Number(this.gold).toLocaleString();
-    //战绩面板
     document.querySelector("#recTotal").innerText = this.record.total;
     document.querySelector("#recWin").innerText = this.record.win;
     document.querySelector("#recLose").innerText = this.record.lose;
@@ -378,7 +375,7 @@ const UserData = {
   }
 };
 
-//==================== 斗地主牌型工具模块 ====================
+//==================== 牌型工具 ====================
 const CardUtil = {
   cardRank:{
     "3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,
@@ -387,7 +384,6 @@ const CardUtil = {
   getRank(card){
     return this.cardRank[card.v];
   },
-  //手牌排序：大王>小王>2>A>K…3
   sortCards(cardList){
     return [...cardList].sort((a,b)=> this.getRank(b) - this.getRank(a));
   },
@@ -503,13 +499,14 @@ const CardUtil = {
   }
 };
 
-// ========= 斗地主核心游戏逻辑【修复版】 =========
+// ========= 斗地主核心逻辑 =========
 const DdzGame = {
   level:"easy",
   baseScore:100,
   myCards:[],
   leftCards:[],
   rightCards:[],
+  topCards:[],
   landCards:[],
   selectedIndex:[],
   isLandlord:false,
@@ -517,7 +514,7 @@ const DdzGame = {
   turn:0,
   gameState:"idle",
   lastParsed:null,
-  lastOutCards:[], //上一轮打出的牌，用于桌面渲染
+  lastOutCards:[],
 
   levelConfig:{
     easy:{base:100,minGold:10000},
@@ -559,13 +556,13 @@ const DdzGame = {
     this.myCards = deck.slice(0,17);
     this.leftCards = deck.slice(17,34);
     this.rightCards = deck.slice(34,51);
+    this.topCards = [];
     this.landCards = deck.slice(51);
     this.selectedIndex = [];
     this.gameState = "calling";
     this.lastParsed = null;
     this.lastOutCards = [];
     this.turn = 0;
-    // 自动排序手牌
     this.myCards = CardUtil.sortCards(this.myCards);
     this.renderAll();
     AudioMgr.playTone("deal");
@@ -578,19 +575,24 @@ const DdzGame = {
     this.showMsg("请叫地主");
   },
 
-  //渲染桌面打出的牌
   renderOutCards(){
     const area = document.querySelector("#gameArea");
-    //清除旧的出牌
     area.querySelectorAll(".card-out").forEach(d=>d.remove());
     if(this.lastOutCards.length===0) return;
-    const centerX = area.clientWidth / 2 - (this.lastOutCards.length * 32)/2;
-    const centerY = area.clientHeight / 2 - 40;
+
+    const count = this.lastOutCards.length;
+    const cardW = 64;
+    const gap = 10;
+    const totalW = count * cardW + (count - 1) * gap;
+
+    const startX = (area.clientWidth - totalW) / 2;
+    const centerY = area.clientHeight / 2 - 46;
+
     this.lastOutCards.forEach((c,idx)=>{
       const div = document.createElement("div");
       div.className = "card-out";
-      div.style.left = (centerX + idx*32)+"px";
-      div.style.top = centerY+"px";
+      div.style.left = (startX + idx * (cardW + gap)) + "px";
+      div.style.top = centerY + "px";
       let colorCls = (c.v==="2"||c.v==="A"||c.v==="BJ"||c.v==="SJ")?"text-red-600":"text-black";
       div.innerHTML = `<div class="p-1 ${colorCls} text-sm">${c.text}</div>`;
       area.appendChild(div);
@@ -600,16 +602,25 @@ const DdzGame = {
   renderAll(){
     const area = document.querySelector("#gameArea");
     area.innerHTML="";
+
+    // 玩家手牌区：底部加宽
+    const areaWidth = area.clientWidth;
+    const playerStartX = 40;
+    const playerEndX = areaWidth - 40;
+    const playerTotalW = playerEndX - playerStartX;
+    const cardW = 72;
+    const gap = 10;
+    const step = Math.min(cardW + gap, (playerTotalW - cardW) / Math.max(1, this.myCards.length - 1));
+
     this.myCards.forEach((c,i)=>{
       const div = document.createElement("div");
       div.className = "card land";
       if(this.selectedIndex.includes(i)) div.classList.add("selected");
-      div.style.left = (120+i*36)+"px";
-      div.style.bottom = "30px";
+      div.style.left = (playerStartX + i * step) + "px";
+      div.style.bottom = "40px";
       div.innerHTML = `<div class="p-1 text-${(c.v==="2"||c.v==="A"||c.v==="BJ"||c.v==="SJ")?"red-600":"black"}">${c.text}</div>`;
       div.dataset.index=i;
       div.onclick = ()=>{
-        //【修复】只有打牌阶段才能选牌
         if(this.gameState!="playing") return;
         AudioMgr.playTone("flip");
         const idx = Number(div.dataset.index);
@@ -624,20 +635,34 @@ const DdzGame = {
       };
       area.appendChild(div);
     });
+
+    // 左边对手
     for(let i=0;i<this.leftCards.length;i++){
       const d = document.createElement("div");
       d.className = "enemy-card";
-      d.style.left = "20px";
+      d.style.left = "30px";
       d.style.top = (120+i*14)+"px";
       area.appendChild(d);
     }
+
+    // 右边对手
     for(let i=0;i<this.rightCards.length;i++){
       const d = document.createElement("div");
       d.className = "enemy-card";
-      d.style.right = "20px";
+      d.style.right = "30px";
       d.style.top = (120+i*14)+"px";
       area.appendChild(d);
     }
+
+    // 上边对手
+    for(let i=0;i<this.topCards.length;i++){
+      const d = document.createElement("div");
+      d.className = "enemy-card";
+      d.style.left = (areaWidth/2 - 40 + i*14)+"px";
+      d.style.top = "30px";
+      area.appendChild(d);
+    }
+
     this.renderOutCards();
   },
 
@@ -649,7 +674,6 @@ const DdzGame = {
       this.landlordSeat = 0;
       this.isLandlord = true;
       this.myCards.push(...this.landCards);
-      //拿到地主底牌后重新排序
       this.myCards = CardUtil.sortCards(this.myCards);
       AudioMgr.speak("抢地主");
       this.showMsg("你成为地主！轮到你出牌");
@@ -675,28 +699,26 @@ const DdzGame = {
     this.renderAll();
     document.querySelector("#outBtn").style.display="block";
     document.querySelector("#passBtn").style.display="block";
-    // 启动AI，只有AI回合才跑
     if(this.turn!==0){
       this.doAiPlay();
     }
   },
 
-  //【修复】AI出牌，只执行一次，不再无限递归循环
   doAiPlay(){
     if(this.gameState!=='playing') return;
     const self = this;
     setTimeout(function(){
-      //AI简单逻辑：随机打一单张或者不出
       const canPlay = Math.random()>0.4;
       if(canPlay){
         AudioMgr.speak("出牌");
         self.showMsg("对手出牌");
-        //AI随便打第一张牌
         let aiCard;
         if(self.turn===1){
           aiCard = self.leftCards.shift();
-        }else{
+        }else if(self.turn===2){
           aiCard = self.rightCards.shift();
+        }else{
+          aiCard = self.topCards.shift();
         }
         self.lastOutCards = [aiCard];
         self.lastParsed = CardUtil.parseCards([aiCard]);
@@ -705,7 +727,6 @@ const DdzGame = {
         self.showMsg("对手不出");
       }
       self.renderAll();
-      //轮换到玩家
       self.turn = 0;
       self.showMsg("轮到你出牌");
     },1400);
@@ -749,7 +770,6 @@ const DdzGame = {
       this.settle(this.isLandlord);
       return;
     }
-    //玩家打完，切换到AI
     this.turn = (this.turn+1)%3;
     this.doAiPlay();
   },
