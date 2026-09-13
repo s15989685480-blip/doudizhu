@@ -372,9 +372,8 @@ const UserData = {
   }
 };
 
-//==================== 【新增完整斗地主牌型工具模块】====================
+//==================== 斗地主牌型工具模块 ====================
 const CardUtil = {
-  //牌权值
   cardRank:{
     "3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,
     "J":11,"Q":12,"K":13,"A":14,"2":15,"SJ":16,"BJ":17
@@ -382,11 +381,9 @@ const CardUtil = {
   getRank(card){
     return this.cardRank[card.v];
   },
-  //获取排序后的权值数组
   getSortedRanks(cardList){
     return cardList.map(c=>this.getRank(c)).sort((a,b)=>a-b);
   },
-  //统计每个点数数量 {rank:count}
   getCountMap(ranks){
     let map = {};
     for(let r of ranks){
@@ -394,42 +391,34 @@ const CardUtil = {
     }
     return map;
   },
-
-  //解析牌型，返回 {type:"",main:主值,size:张数} type:single,double,triple,threeOne,threeTwo,straight,doubleStraight,plane,bomb,rocket
   parseCards(cardList){
     const len = cardList.length;
     const ranks = this.getSortedRanks(cardList);
     const map = this.getCountMap(ranks);
     const keys = Object.keys(map).map(Number).sort((a,b)=>a-b);
 
-    //火箭 大小王
     if(len===2 && ranks.includes(16) && ranks.includes(17)){
       return {type:"rocket",main:17,size:2};
     }
-    //炸弹 4张一样
     if(len===4){
       let four = keys.find(k=>map[k]===4);
       if(four!==undefined){
         return {type:"bomb",main:four,size:4};
       }
     }
-    //单张
     if(len===1){
       return {type:"single",main:ranks[0],size:1};
     }
-    //对子
     if(len===2){
       if(ranks[0]===ranks[1]){
         return {type:"double",main:ranks[0],size:2};
       }
     }
-    //三张
     if(len===3){
       if(keys.length===1&&map[keys[0]]===3){
         return {type:"triple",main:keys[0],size:3};
       }
     }
-    //三带一 4张：3+1
     if(len===4){
       if(keys.length===2){
         let t3 = keys.find(k=>map[k]===3);
@@ -438,7 +427,6 @@ const CardUtil = {
         }
       }
     }
-    //三带二 5张：3+2
     if(len===5){
       if(keys.length===2){
         let t3 = keys.find(k=>map[k]===3);
@@ -448,7 +436,6 @@ const CardUtil = {
         }
       }
     }
-    //顺子：5张及以上连续单张，不能包含2、王
     if(len>=5){
       let no2joker = ranks.every(r=>r<=14);
       if(no2joker){
@@ -461,7 +448,6 @@ const CardUtil = {
         }
       }
     }
-    //连对：>=3对连续对子，不能包含2、王
     if(len>=6 && len%2===0){
       let pairCount = len/2;
       let no2joker = keys.every(k=>k<=14);
@@ -476,7 +462,6 @@ const CardUtil = {
         }
       }
     }
-    //飞机(纯飞机不带翅膀) 334455，>=2组三张，不含2王
     if(len>=6 && len%3===0){
       let planeCnt = len/3;
       let allTriple = Object.values(map).every(c=>c===3);
@@ -491,22 +476,16 @@ const CardUtil = {
         }
       }
     }
-    //非法牌型
     return null;
   },
-
-  //比较两套牌，a能否大过b，last为上家解析结果，cur为当前解析结果
   canBeat(last,cur){
     if(!cur) return false;
-    //火箭最大，可压一切
     if(cur.type==="rocket") return true;
-    //炸弹可以压非炸弹、火箭
     if(cur.type==="bomb"){
       if(last.type!=="rocket" && last.type!=="bomb") return true;
       if(last.type==="bomb") return cur.main>last.main;
       return false;
     }
-    //不是炸弹火箭，必须牌型完全一致、张数一样
     if(cur.type !== last.type || cur.size !== last.size){
       return false;
     }
@@ -514,7 +493,7 @@ const CardUtil = {
   }
 };
 
-// ========= 斗地主核心游戏逻辑 =========
+// ========= 斗地主核心游戏逻辑【修复版】 =========
 const DdzGame = {
   level:"easy",
   baseScore:100,
@@ -522,14 +501,12 @@ const DdzGame = {
   leftCards:[],
   rightCards:[],
   landCards:[],
-  selectedIndex:[], //选中的手牌下标
+  selectedIndex:[],
   isLandlord:false,
   landlordSeat:-1,
-  turn:0, //当前轮到谁 0自己 1左AI 2右AI
-  gameState:"idle", //idle,calling,playing,settle
-  lastPlayCards:[],
-  lastPlaySeat:-1,
-  lastParsed:null, //上家解析后的牌型对象
+  turn:0,
+  gameState:"idle",
+  lastParsed:null,
 
   levelConfig:{
     easy:{base:100,minGold:10000},
@@ -548,7 +525,6 @@ const DdzGame = {
     setTimeout(()=>el.innerText="",2200);
   },
 
-  //洗牌发牌
   initDeck(){
     const kinds = ["3","4","5","6","7","8","9","10","J","Q","K","A","2"];
     const colors = ["♠","♥","♣","♦"];
@@ -560,7 +536,6 @@ const DdzGame = {
     }
     deck.push({v:"BJ",text:"🃏大王"});
     deck.push({v:"SJ",text:"🃏小王"});
-    //洗牌
     for(let i=deck.length-1;i>0;i--){
       const j = Math.floor(Math.random()*(i+1));
       [deck[i],deck[j]] = [deck[j],deck[i]];
@@ -576,15 +551,12 @@ const DdzGame = {
     this.landCards = deck.slice(51);
     this.selectedIndex = [];
     this.gameState = "calling";
-    this.lastPlayCards = [];
-    this.lastPlaySeat = -1;
     this.lastParsed = null;
     this.turn = 0;
     this.renderAll();
     AudioMgr.playTone("deal");
     AudioMgr.speak("发牌");
     document.querySelector("#operWrap").classList.remove("hidden");
-    //初始只显示叫地主抢地主按钮
     document.querySelector("#callBtn").style.display="block";
     document.querySelector("#robBtn").style.display="block";
     document.querySelector("#outBtn").style.display="none";
@@ -595,16 +567,16 @@ const DdzGame = {
   renderAll(){
     const area = document.querySelector("#gameArea");
     area.innerHTML="";
-    //渲染自己手牌
     this.myCards.forEach((c,i)=>{
       const div = document.createElement("div");
       div.className = "card land";
       if(this.selectedIndex.includes(i)) div.classList.add("selected");
       div.style.left = (120+i*36)+"px";
       div.style.bottom = "30px";
-      div.innerHTML = `<div class="p-1 text-${c.v==="2"||c.v==="A"?"red-600":"black"}">${c.text}</div>`;
+      div.innerHTML = `<div class="p-1 text-${(c.v==="2"||c.v==="A"||c.v==="BJ"||c.v==="SJ")?"red-600":"black"}">${c.text}</div>`;
       div.dataset.index=i;
       div.onclick = ()=>{
+        //【修复】只有打牌阶段才能选牌
         if(this.gameState!="playing") return;
         AudioMgr.playTone("flip");
         const idx = Number(div.dataset.index);
@@ -619,7 +591,6 @@ const DdzGame = {
       };
       area.appendChild(div);
     });
-    //左边玩家牌背
     for(let i=0;i<this.leftCards.length;i++){
       const d = document.createElement("div");
       d.className = "enemy-card";
@@ -627,7 +598,6 @@ const DdzGame = {
       d.style.top = (120+i*14)+"px";
       area.appendChild(d);
     }
-    //右边玩家牌背
     for(let i=0;i<this.rightCards.length;i++){
       const d = document.createElement("div");
       d.className = "enemy-card";
@@ -646,57 +616,54 @@ const DdzGame = {
       this.isLandlord = true;
       this.myCards.push(...this.landCards);
       AudioMgr.speak("抢地主");
-      this.showMsg("你成为地主！");
+      this.showMsg("你成为地主！轮到你出牌");
       this.turn = 0;
     }else{
-      //AI抢
       const rob = Math.random()>0.5;
       if(rob){
         this.landlordSeat = 1;
         AudioMgr.speak("抢地主");
-        this.showMsg("对手抢了地主");
+        this.showMsg("左边对手抢了地主，对手出牌");
         this.turn = 1;
       }else{
         this.landlordSeat = 2;
         AudioMgr.speak("不抢");
-        this.showMsg("另一玩家当地主");
+        this.showMsg("右边对手当地主，对手出牌");
         this.turn = 2;
       }
       this.isLandlord = false;
     }
     this.gameState = "playing";
-    this.lastParsed = null; //地主先手，可以随便出牌
+    this.lastParsed = null;
     this.renderAll();
-    //出牌按钮显示
     document.querySelector("#outBtn").style.display="block";
     document.querySelector("#passBtn").style.display="block";
-    this.aiTurn();
+    // 启动AI，只有AI回合才跑
+    if(this.turn!==0){
+      this.doAiPlay();
+    }
   },
 
-  //AI回合模拟
-  aiTurn(){
-    if(this.gameState!=="playing") return;
-    if(this.turn!==0){
-      setTimeout(()=>{
-        //如果上家不是自己，AI有概率选择不出
-        const pass = Math.random()>0.45;
-        if(pass){
-          AudioMgr.speak("不出");
-          this.showMsg("对手不出");
-        }else{
-          AudioMgr.speak("出牌");
-          this.showMsg("对手出牌");
-          //AI出牌后，重置：轮到玩家，玩家可以随便压
-          this.lastParsed = null;
-        }
-        //轮换回合
-        this.turn = (this.turn+1)%3;
-        if(this.turn===0){
-          this.showMsg("轮到你出牌");
-        }
-        this.aiTurn();
-      },1200);
-    }
+  //【修复】AI出牌，只执行一次，不再无限递归循环
+  doAiPlay(){
+    if(this.gameState!=='playing') return;
+    const self = this;
+    setTimeout(function(){
+      //AI简单逻辑：随机打一单张或者不出
+      const canPlay = Math.random()>0.4;
+      if(canPlay){
+        AudioMgr.speak("出牌");
+        self.showMsg("对手出牌");
+        //AI随便打第一张单张
+        self.lastParsed = CardUtil.parseCards([{v:"3"}]);
+      }else{
+        AudioMgr.speak("不出");
+        self.showMsg("对手不出");
+      }
+      //轮换到玩家
+      self.turn = 0;
+      self.showMsg("轮到你出牌");
+    },1400);
   },
 
   playerOutCard(){
@@ -709,14 +676,12 @@ const DdzGame = {
       this.showMsg("请先选择要出的牌！");
       return;
     }
-    //取出选中的卡牌
     const selectedCards = this.selectedIndex.map(i=>this.myCards[i]);
     const curParse = CardUtil.parseCards(selectedCards);
     if(!curParse){
       this.showMsg("非法牌型，请重新选牌！");
       return;
     }
-    //判断：lastParsed为null说明是本轮第一个出牌，可以随便出；否则必须大于上家
     if(this.lastParsed!==null){
       if(!CardUtil.canBeat(this.lastParsed,curParse)){
         this.showMsg("牌打不过上家，请选更大的牌！");
@@ -725,25 +690,22 @@ const DdzGame = {
     }
 
     AudioMgr.playTone("chip");
-    //移除选中的牌
     const keep = [];
     for(let i=0;i<this.myCards.length;i++){
       if(!this.selectedIndex.includes(i)) keep.push(this.myCards[i]);
     }
     this.myCards = keep;
     this.selectedIndex = [];
-    //记录本次出牌作为下家要压的牌
     this.lastParsed = curParse;
-    this.lastPlaySeat = 0;
     this.renderAll();
 
-    //自己出完手牌，胜利
     if(this.myCards.length===0){
       this.settle(this.isLandlord);
       return;
     }
+    //玩家打完，切换到AI
     this.turn = (this.turn+1)%3;
-    this.aiTurn();
+    this.doAiPlay();
   },
 
   playerPass(){
@@ -752,7 +714,6 @@ const DdzGame = {
       this.showMsg("还没轮到你！");
       return;
     }
-    //不能当第一个出牌人就不出
     if(this.lastParsed===null){
       this.showMsg("先手不能不出，必须出牌！");
       return;
@@ -761,7 +722,7 @@ const DdzGame = {
     AudioMgr.speak("不出");
     this.showMsg("你选择不出");
     this.turn = (this.turn+1)%3;
-    this.aiTurn();
+    this.doAiPlay();
   },
 
   settle(isWin){
@@ -793,7 +754,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   AudioMgr.init();
   ParticleSys.init(document.querySelector("#particleContainer"));
 
-  //登录注册
   document.querySelector("#regBtn").onclick = ()=>{
     const acc = document.querySelector("#accInput").value.trim();
     if(!acc){alert("请输入账号");return;}
@@ -803,7 +763,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     document.querySelector("#roomModal").classList.remove("hidden");
   };
 
-  //场次选择
   document.querySelectorAll(".roomSel").forEach(btn=>{
     btn.onclick = ()=>{
       AudioMgr.playTone("chip");
@@ -819,7 +778,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
   });
 
-  //每日领取
   document.querySelector("#getDailyBtn").onclick = ()=>{
     AudioMgr.playTone("click");
     const ok = UserData.getDailyReward();
@@ -830,13 +788,11 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
   };
 
-  //静音切换
   document.querySelector("#muteBtn").onclick = ()=>{
     AudioMgr.setMute(!AudioMgr.muted);
     AudioMgr.playTone("click");
   };
 
-  //战绩弹窗
   document.querySelector("#recordBtn").onclick = ()=>{
     AudioMgr.playTone("click");
     UserData.refreshUI();
@@ -846,7 +802,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     document.querySelector("#recordModal").classList.add("hidden");
   };
 
-  //叫地主抢地主
   document.querySelector("#callBtn").onclick = ()=>{
     DdzGame.callLandlord(false);
   };
@@ -854,7 +809,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     DdzGame.callLandlord(true);
   };
 
-  //出牌、不出按钮绑定
   document.querySelector("#outBtn").onclick = ()=>{
     DdzGame.playerOutCard();
   };
@@ -862,7 +816,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     DdzGame.playerPass();
   };
 
-  //再来一局
   document.querySelector("#nextRoundBtn").onclick = ()=>{
     document.querySelector("#settleModal").classList.add("hidden");
     document.querySelector("#roomModal").classList.remove("hidden");
