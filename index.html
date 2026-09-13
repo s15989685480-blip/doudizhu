@@ -56,11 +56,22 @@ html,body{
   background:linear-gradient(135deg,#194b91,#0f2b52);
   border:2px solid #ffd70088;
 }
-/* 桌面打出的牌：尺寸稍大 */
+/* 桌面打出的牌：加大尺寸，保证看清 */
 .card-out{
-  width:64px;height:92px;border-radius:7px;background:#fff;
-  position:absolute;box-shadow:0 3px 10px #0007;
+  width:70px;height:100px;border-radius:8px;background:#fff;
+  position:absolute;box-shadow:0 4px 14px #0009;
   pointer-events:none;
+  overflow:hidden;
+}
+/* 出牌方提示文字 */
+.out-tip-text{
+  position:absolute;
+  font-size:18px;
+  color:#ffdd55;
+  font-weight:bold;
+  text-shadow: 0 2px 6px black;
+  pointer-events:none;
+  z-index:5;
 }
 /* 金币掉落特效 */
 .coin-fall{
@@ -511,10 +522,11 @@ const DdzGame = {
   selectedIndex:[],
   isLandlord:false,
   landlordSeat:-1,
-  turn:0,
+  turn:0, //0自己，1左边，2上边，3右边
   gameState:"idle",
   lastParsed:null,
   lastOutCards:[],
+  lastOutPlayerTip:"",
 
   levelConfig:{
     easy:{base:100,minGold:10000},
@@ -562,6 +574,7 @@ const DdzGame = {
     this.gameState = "calling";
     this.lastParsed = null;
     this.lastOutCards = [];
+    this.lastOutPlayerTip = "";
     this.turn = 0;
     this.myCards = CardUtil.sortCards(this.myCards);
     this.renderAll();
@@ -575,24 +588,45 @@ const DdzGame = {
     this.showMsg("请叫地主");
   },
 
+  //【优化出牌渲染，解决牌叠牌，支持多行，出牌方提示文字】
   renderOutCards(){
     const area = document.querySelector("#gameArea");
-    area.querySelectorAll(".card-out").forEach(d=>d.remove());
+    area.querySelectorAll(".card-out,.out-tip-text").forEach(d=>d.remove());
     if(this.lastOutCards.length===0) return;
 
     const count = this.lastOutCards.length;
-    const cardW = 64;
-    const gap = 10;
-    const totalW = count * cardW + (count - 1) * gap;
+    const cardW = 70;
+    const gap = 14; //加大间隙，不再叠牌
+    const maxRowCard = 8; //一行最多8张，超过自动换行
+    const areaW = area.clientWidth;
+    const areaH = area.clientHeight;
 
-    const startX = (area.clientWidth - totalW) / 2;
-    const centerY = area.clientHeight / 2 - 46;
+    // 计算行数
+    const rows = Math.ceil(count / maxRowCard);
+    const perRow = maxRowCard;
+
+    //整体居中起始坐标
+    const blockTotalW = Math.min(count, perRow) * cardW + (Math.min(count, perRow)-1)*gap;
+    const baseX = (areaW - blockTotalW) / 2;
+    const baseY = areaH * 0.42;
+
+    //添加出牌方提示文字
+    const tipDom = document.createElement("div");
+    tipDom.className = "out-tip-text";
+    tipDom.innerText = this.lastOutPlayerTip;
+    tipDom.style.left = baseX+"px";
+    tipDom.style.top = (baseY - 32)+"px";
+    area.appendChild(tipDom);
 
     this.lastOutCards.forEach((c,idx)=>{
+      const row = Math.floor(idx / perRow);
+      const col = idx % perRow;
       const div = document.createElement("div");
       div.className = "card-out";
-      div.style.left = (startX + idx * (cardW + gap)) + "px";
-      div.style.top = centerY + "px";
+      const px = baseX + col * (cardW + gap);
+      const py = baseY + row * (cardW + 16);
+      div.style.left = px + "px";
+      div.style.top = py + "px";
       let colorCls = (c.v==="2"||c.v==="A"||c.v==="BJ"||c.v==="SJ")?"text-red-600":"text-black";
       div.innerHTML = `<div class="p-1 ${colorCls} text-sm">${c.text}</div>`;
       area.appendChild(div);
@@ -603,13 +637,13 @@ const DdzGame = {
     const area = document.querySelector("#gameArea");
     area.innerHTML="";
 
-    // 玩家手牌区：底部加宽
+    // 玩家手牌区，加宽左右边距，防止挤压
     const areaWidth = area.clientWidth;
-    const playerStartX = 40;
-    const playerEndX = areaWidth - 40;
+    const playerStartX = 60;
+    const playerEndX = areaWidth - 60;
     const playerTotalW = playerEndX - playerStartX;
     const cardW = 72;
-    const gap = 10;
+    const gap = 12;
     const step = Math.min(cardW + gap, (playerTotalW - cardW) / Math.max(1, this.myCards.length - 1));
 
     this.myCards.forEach((c,i)=>{
@@ -645,21 +679,21 @@ const DdzGame = {
       area.appendChild(d);
     }
 
-    // 右边对手
-    for(let i=0;i<this.rightCards.length;i++){
-      const d = document.createElement("div");
-      d.className = "enemy-card";
-      d.style.right = "30px";
-      d.style.top = (120+i*14)+"px";
-      area.appendChild(d);
-    }
-
     // 上边对手
     for(let i=0;i<this.topCards.length;i++){
       const d = document.createElement("div");
       d.className = "enemy-card";
       d.style.left = (areaWidth/2 - 40 + i*14)+"px";
       d.style.top = "30px";
+      area.appendChild(d);
+    }
+
+    // 右边对手
+    for(let i=0;i<this.rightCards.length;i++){
+      const d = document.createElement("div");
+      d.className = "enemy-card";
+      d.style.right = "30px";
+      d.style.top = (120+i*14)+"px";
       area.appendChild(d);
     }
 
@@ -686,16 +720,17 @@ const DdzGame = {
         this.showMsg("左边对手抢了地主，对手出牌");
         this.turn = 1;
       }else{
-        this.landlordSeat = 2;
+        this.landlordSeat = 3;
         AudioMgr.speak("不抢");
         this.showMsg("右边对手当地主，对手出牌");
-        this.turn = 2;
+        this.turn = 3;
       }
       this.isLandlord = false;
     }
     this.gameState = "playing";
     this.lastParsed = null;
     this.lastOutCards = [];
+    this.lastOutPlayerTip = "";
     this.renderAll();
     document.querySelector("#outBtn").style.display="block";
     document.querySelector("#passBtn").style.display="block";
@@ -704,29 +739,65 @@ const DdzGame = {
     }
   },
 
+  //AI出牌优化：可以打多张，不再只会单张
   doAiPlay(){
     if(this.gameState!=='playing') return;
     const self = this;
     setTimeout(function(){
-      const canPlay = Math.random()>0.4;
-      if(canPlay){
-        AudioMgr.speak("出牌");
-        self.showMsg("对手出牌");
-        let aiCard;
-        if(self.turn===1){
-          aiCard = self.leftCards.shift();
-        }else if(self.turn===2){
-          aiCard = self.rightCards.shift();
+      let tipName = "";
+      let aiCardList = [];
+      let aiHand;
+      if(self.turn===1){
+        tipName = "【左边对手】";
+        aiHand = self.leftCards;
+      }else if(self.turn===2){
+        tipName = "【上方对手】";
+        aiHand = self.topCards;
+      }else if(self.turn===3){
+        tipName = "【右边对手】";
+        aiHand = self.rightCards;
+      }else{
+        return;
+      }
+
+      //AI策略：有上家牌就尝试找能压的，没有就随机选1‑3张合法牌
+      let canPlayFlag = Math.random()>0.35;
+      if(canPlayFlag){
+        //简单AI：尝试取前1~3张，判断合法牌型
+        const tryCount = Math.min(aiHand.length, Math.floor(Math.random()*3)+1);
+        aiCardList = aiHand.slice(0,tryCount);
+        let parseTry = CardUtil.parseCards(aiCardList);
+        //如果有上家牌，校验是否压得过
+        if(self.lastParsed){
+          if(!parseTry || !CardUtil.canBeat(self.lastParsed, parseTry)){
+            //打不过就不出
+            canPlayFlag = false;
+          }
         }else{
-          aiCard = self.topCards.shift();
+          if(!parseTry) canPlayFlag = false;
         }
-        self.lastOutCards = [aiCard];
-        self.lastParsed = CardUtil.parseCards([aiCard]);
+      }
+
+      if(canPlayFlag && aiCardList.length>0){
+        AudioMgr.speak("出牌");
+        self.showMsg(tipName + "出牌");
+        //从手牌移除
+        for(let c of aiCardList){
+          const idx = aiHand.findIndex(x=>x===c);
+          if(idx>=0) aiHand.splice(idx,1);
+        }
+        self.lastOutCards = aiCardList;
+        self.lastParsed = CardUtil.parseCards(aiCardList);
+        self.lastOutPlayerTip = tipName + "打出";
       }else{
         AudioMgr.speak("不出");
-        self.showMsg("对手不出");
+        self.showMsg(tipName + "不出");
+        self.lastOutCards = [];
+        self.lastParsed = null;
+        self.lastOutPlayerTip = "";
       }
       self.renderAll();
+      //轮到自己
       self.turn = 0;
       self.showMsg("轮到你出牌");
     },1400);
@@ -764,13 +835,15 @@ const DdzGame = {
     this.selectedIndex = [];
     this.lastParsed = curParse;
     this.lastOutCards = selectedCards;
+    this.lastOutPlayerTip = "【你】打出";
     this.renderAll();
 
     if(this.myCards.length===0){
       this.settle(this.isLandlord);
       return;
     }
-    this.turn = (this.turn+1)%3;
+    //切换AI回合
+    this.turn = 1;
     this.doAiPlay();
   },
 
@@ -787,7 +860,11 @@ const DdzGame = {
     AudioMgr.playTone("click");
     AudioMgr.speak("不出");
     this.showMsg("你选择不出");
-    this.turn = (this.turn+1)%3;
+    this.lastOutCards = [];
+    this.lastParsed = null;
+    this.lastOutPlayerTip = "";
+    this.renderAll();
+    this.turn = 1;
     this.doAiPlay();
   },
 
@@ -890,3 +967,4 @@ document.addEventListener("DOMContentLoaded",()=>{
 </script>
 </body>
 </html>
+
