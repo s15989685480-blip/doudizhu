@@ -12,18 +12,7 @@ html,body{
   background:#051020;
   font-family:"Microsoft Yahei",sans-serif;
 }
-/* 强制横屏样式 */
-.landscape-wrap{
-  width:100vw;height:100vh;
-  display:flex;align-items:center;justify-content:center;
-}
-.portrait-tip{
-  display:none;color:#fff;text-align:center;padding:2rem;
-}
-@media (orientation:portrait){
-  .game-main{display:none !important;}
-  .portrait-tip{display:block !important;}
-}
+/* ========== 删除横屏相关样式 ========== */
 /* 动态豪华桌布 */
 .table-cloth{
   position:absolute;inset:0;
@@ -49,11 +38,11 @@ html,body{
   width:72px;height:104px;border-radius:8px;
   background:#fff;position:absolute;
   box-shadow:0 4px 12px #0008;
-  transition:transform 0.3s cubic‑bezier(0.175,0.885,0.32,1.275);
+  transition:transform 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
   user-select:none;cursor:pointer;
 }
 .card.land{
-  animation:cardLand 0.4s cubic‑bezier(0.175,0.885,0.32,1.275);
+  animation:cardLand 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
 }
 @keyframes cardLand{
   0%{transform:translateY(-120px) scale(0.7);opacity:0;}
@@ -68,27 +57,27 @@ html,body{
 /* 金币掉落特效 */
 .coin-fall{
   position:absolute;pointer-events:none;font-size:26px;font-weight:bold;
-  animation:coinDrop 1.2s ease‑out forwards;
+  animation:coinDrop 1.2s ease-out forwards;
 }
 @keyframes coinDrop{
   0%{transform:translateY(0) scale(1);opacity:1;}
   100%{transform:translateY(-140px) scale(1.4);opacity:0;}
 }
 /* 豪华发光按钮 */
-.btn‑lux{
+.btn-lux{
   background:linear-gradient(180deg,#ffd042,#b47c00);
   box-shadow:0 0 14px #ffbc0099,inset 0 1px 0 #fff8;
   border:1px solid #ffea90;
   color:#2c1600;font-weight:bold;border-radius:10px;
   transition:0.15s;
 }
-.btn‑lux:active{transform:scale(0.94);box-shadow:0 0 6px #ffbc0066}
-.btn‑red{
+.btn-lux:active{transform:scale(0.94);box-shadow:0 0 6px #ffbc0066}
+.btn-red{
   background:linear-gradient(180deg,#ff5c5c,#a81010);
   box-shadow:0 0 12px #ff333388;
   color:#fff;border:1px solid #ff9494;
 }
-.btn‑blue{
+.btn-blue{
   background:linear-gradient(180deg,#42aaff,#004e9c);
   box-shadow:0 0 12px #3399ff88;color:#fff;
 }
@@ -102,7 +91,7 @@ html,body{
   border:2px solid #ffd70077;border-radius:16px;
   padding:24px;min-width:320px;box-shadow:0 0 30px #ffcc0044;
 }
-.glow‑text{
+.glow-text{
   text-shadow:0 0 8px #ffdd44;
 }
 /* 对手牌背 */
@@ -126,26 +115,21 @@ html,body{
 </style>
 </head>
 <body>
-<div class="landscape-wrap">
-  <div class="portrait-tip">
-    <div class="text‑3xl mb‑4">📱请把手机横过来游玩</div>
-    <div>本游戏强制锁定横屏模式</div>
-  </div>
-
-  <div id="gameMain" class="game-main w-full h-full relative hidden">
+<div class="w-full h-full relative">
+  <div id="gameMain" class="game-main w-full h-full relative">
     <div class="table-cloth"></div>
-    <div id="particleContainer" class="absolute inset‑0 pointer‑events‑none"></div>
+    <div id="particleContainer" class="absolute inset-0 pointer-events-none"></div>
 
     <!-- 顶部信息栏 -->
-    <div class="absolute top‑2 left‑2 right‑2 flex justify‑between items‑center z‑10">
-      <div class="bg‑black/50 rounded‑lg px‑3 py‑1 text‑white">
+    <div class="absolute top-2 left-2 right-2 flex justify-between items-center z-10">
+      <div class="bg-black/50 rounded-lg px-3 py-1 text-white">
         <span>账号：<span id="showUser">未登录</span></span>｜
         <span>💰金币：<span id="showGold">0</span></span>
       </div>
-      <div class="flex gap‑2">
-        <button id="getDailyBtn" class="btn‑lux px‑3 py‑1 text‑sm">每日领20万</button>
-        <button id="recordBtn" class="btn‑blue px‑3 py‑1 text‑sm">战绩</button>
-        <button id="muteBtn" class="btn‑red px‑3 py‑1 text‑sm">🔊音效</button>
+      <div class="flex gap-2">
+        <button id="getDailyBtn" class="btn-lux px-3 py-1 text-sm">每日领20万</button>
+        <button id="recordBtn" class="btn-blue px-3 py-1 text-sm">战绩</button>
+        <button id="muteBtn" class="btn-red px-3 py-1 text-sm">🔊音效</button>
       </div>
     </div>
 
@@ -154,41 +138,41 @@ html,body{
     <!-- 登录注册弹窗 -->
     <div id="loginModal" class="modal">
       <div class="modal-box">
-        <h2 class="text‑2xl text‑yellow‑300 glow‑text mb‑4 text‑center">激情斗地主【豪华版】</h2>
-        <div class="mb‑3">
-          <label class="text‑white">输入账号：</label>
-          <input id="accInput" class="w‑full mt‑1 px‑2 py‑2 rounded bg‑black/40 text‑white border border‑yellow‑600" placeholder="随便填账号，无需密码">
+        <h2 class="text-2xl text-yellow-300 glow-text mb-4 text-center">激情斗地主【豪华版】</h2>
+        <div class="mb-3">
+          <label class="text-white">输入账号：</label>
+          <input id="accInput" class="w-full mt-1 px-2 py-2 rounded bg-black/40 text-white border border-yellow-600" placeholder="随便填账号，无需密码">
         </div>
-        <div class="flex gap‑3 mt‑4">
-          <button id="regBtn" class="btn‑lux flex‑1 py‑2">注册登录</button>
+        <div class="flex gap-3 mt-4">
+          <button id="regBtn" class="btn-lux flex-1 py-2">注册登录</button>
         </div>
-        <div class="text‑gray‑300 mt‑3 text‑sm text‑center">注册即自动登录，本地保存数据</div>
+        <div class="text-gray-300 mt-3 text-sm text-center">注册即自动登录，本地保存数据</div>
       </div>
     </div>
 
     <!-- 场次选择弹窗 -->
     <div id="roomModal" class="modal hidden">
       <div class="modal-box">
-        <h2 class="text‑xl text‑yellow‑300 glow‑text mb‑4 text‑center">选择游戏场次</h2>
-        <div class="flex flex‑col gap‑3">
-          <button data‑level="easy" class="roomSel btn‑lux py‑2">🟢菜鸟场｜底分100｜入场≥1万</button>
-          <button data‑level="normal" class="roomSel btn‑lux py‑2">🟡普通场｜底分500｜入场≥10万</button>
-          <button data‑level="hard" class="roomSel btn‑lux py‑2">🔴高手场｜底分2000｜入场≥80万</button>
+        <h2 class="text-xl text-yellow-300 glow-text mb-4 text-center">选择游戏场次</h2>
+        <div class="flex flex-col gap-3">
+          <button data-level="easy" class="roomSel btn-lux py-2">🟢菜鸟场｜底分100｜入场≥1万</button>
+          <button data-level="normal" class="roomSel btn-lux py-2">🟡普通场｜底分500｜入场≥10万</button>
+          <button data-level="hard" class="roomSel btn-lux py-2">🔴高手场｜底分2000｜入场≥80万</button>
         </div>
       </div>
     </div>
 
     <!-- 战绩弹窗 -->
     <div id="recordModal" class="modal hidden">
-      <div class="modal-box w‑96">
-        <h2 class="text‑xl text‑yellow‑300 glow‑text mb‑3 text‑center">📊战绩统计</h2>
-        <div class="text‑white">
+      <div class="modal-box w-96">
+        <h2 class="text-xl text-yellow-300 glow-text mb-3 text-center">📊战绩统计</h2>
+        <div class="text-white">
           <div class="record-item"><span>总对局</span><span id="recTotal">0</span></div>
           <div class="record-item"><span>胜利</span><span id="recWin">0</span></div>
           <div class="record-item"><span>失败</span><span id="recLose">0</span></div>
           <div class="record-item"><span>胜率</span><span id="recRate">0%</span></div>
         </div>
-        <button id="closeRecBtn" class="btn‑lux w‑full mt‑4 py‑2">关闭</button>
+        <button id="closeRecBtn" class="btn-lux w-full mt-4 py-2">关闭</button>
       </div>
     </div>
 
@@ -196,19 +180,19 @@ html,body{
     <div id="gameArea"></div>
 
     <!-- 底部操作按钮区 -->
-    <div id="operWrap" class="absolute bottom‑4 left‑1/2‑translate‑x‑1/2 flex gap‑3 z‑10 hidden">
-      <button id="callBtn" class="btn‑lux px‑5 py‑2">叫地主</button>
-      <button id="robBtn" class="btn‑red px‑5 py‑2">抢地主</button>
-      <button id="outBtn" class="btn‑lux px‑5 py‑2">出牌</button>
-      <button id="passBtn" class="btn‑blue px‑5 py‑2">不出</button>
+    <div id="operWrap" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 z-10 hidden">
+      <button id="callBtn" class="btn-lux px-5 py-2">叫地主</button>
+      <button id="robBtn" class="btn-red px-5 py-2">抢地主</button>
+      <button id="outBtn" class="btn-lux px-5 py-2">出牌</button>
+      <button id="passBtn" class="btn-blue px-5 py-2">不出</button>
     </div>
 
     <!-- 结束结算弹窗 -->
     <div id="settleModal" class="modal hidden">
-      <div class="modal-box text‑center">
-        <h2 id="settleTitle" class="text‑2xl glow‑text mb‑3">游戏结束</h2>
-        <div class="text‑white mb‑2">金币变化：<span id="settleGold"></span></div>
-        <button id="nextRoundBtn" class="btn‑lux px‑6 py‑2">再来一局</button>
+      <div class="modal-box text-center">
+        <h2 id="settleTitle" class="text-2xl glow-text mb-3">游戏结束</h2>
+        <div class="text-white mb-2">金币变化：<span id="settleGold"></span></div>
+        <button id="nextRoundBtn" class="btn-lux px-6 py-2">再来一局</button>
       </div>
     </div>
   </div>
@@ -278,7 +262,7 @@ const AudioMgr = {
     if(this.muted || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = "zh‑CN";
+    utt.lang = "zh-CN";
     utt.rate =1.15;
     utt.volume = 0.85;
     window.speechSynthesis.speak(utt);
@@ -316,10 +300,10 @@ function createCoinEffect(x,y,isWin,num){
   const wrap = document.querySelector("#gameArea");
   for(let i=0;i<6;i++){
     const d = document.createElement("div");
-    d.className = "coin‑fall";
+    d.className = "coin-fall";
     d.style.left = x+"px";d.style.top = y+"px";
     d.style.color = isWin?"#ffd700":"#ff4444";
-    d.innerText = (isWin?"+":"‑")+num;
+    d.innerText = (isWin?"+":"-")+num;
     wrap.appendChild(d);
     setTimeout(()=>d.remove(),1200);
   }
@@ -430,7 +414,7 @@ const DdzGame = {
     deck.push({v:"BJ",text:"🃏大王"});
     deck.push({v:"SJ",text:"🃏小王"});
     //洗牌
-    for(let i=deck.length‑1;i>0;i--){
+    for(let i=deck.length-1;i>0;i--){
       const j = Math.floor(Math.random()*(i+1));
       [deck[i],deck[j]] = [deck[j],deck[i]];
     }
@@ -462,7 +446,7 @@ const DdzGame = {
       div.className = "card land";
       div.style.left = (120+i*36)+"px";
       div.style.bottom = "30px";
-      div.innerHTML = `<div class="p‑1 text‑${c.v==="2"||c.v==="A"?"red‑600":"black"}">${c.text}</div>`;
+      div.innerHTML = `<div class="p-1 text-${c.v==="2"||c.v==="A"?"red-600":"black"}">${c.text}</div>`;
       div.dataset.index=i;
       div.onclick = ()=>{
         AudioMgr.playTone("flip");
@@ -473,7 +457,7 @@ const DdzGame = {
     //左边玩家牌背
     for(let i=0;i<this.leftCards.length;i++){
       const d = document.createElement("div");
-      d.className = "enemy‑card";
+      d.className = "enemy-card";
       d.style.left = "20px";
       d.style.top = (120+i*14)+"px";
       area.appendChild(d);
@@ -481,7 +465,7 @@ const DdzGame = {
     //右边玩家牌背
     for(let i=0;i<this.rightCards.length;i++){
       const d = document.createElement("div");
-      d.className = "enemy‑card";
+      d.className = "enemy-card";
       d.style.right = "20px";
       d.style.top = (120+i*14)+"px";
       area.appendChild(d);
@@ -543,7 +527,6 @@ const DdzGame = {
 document.addEventListener("DOMContentLoaded",()=>{
   AudioMgr.init();
   ParticleSys.init(document.querySelector("#particleContainer"));
-  document.querySelector("#gameMain").classList.remove("hidden");
 
   //登录注册
   document.querySelector("#regBtn").onclick = ()=>{
