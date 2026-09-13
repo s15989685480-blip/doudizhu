@@ -56,6 +56,12 @@ html,body{
   background:linear-gradient(135deg,#194b91,#0f2b52);
   border:2px solid #ffd70088;
 }
+/* 桌面打出的牌 */
+.card-out{
+  width:54px;height:78px;border-radius:6px;background:#fff;
+  position:absolute;box-shadow:0 2px 8px #0007;
+  pointer-events:none;
+}
 /* 金币掉落特效 */
 .coin-fall{
   position:absolute;pointer-events:none;font-size:26px;font-weight:bold;
@@ -381,6 +387,10 @@ const CardUtil = {
   getRank(card){
     return this.cardRank[card.v];
   },
+  //手牌排序：大王>小王>2>A>K…3
+  sortCards(cardList){
+    return [...cardList].sort((a,b)=> this.getRank(b) - this.getRank(a));
+  },
   getSortedRanks(cardList){
     return cardList.map(c=>this.getRank(c)).sort((a,b)=>a-b);
   },
@@ -507,6 +517,7 @@ const DdzGame = {
   turn:0,
   gameState:"idle",
   lastParsed:null,
+  lastOutCards:[], //上一轮打出的牌，用于桌面渲染
 
   levelConfig:{
     easy:{base:100,minGold:10000},
@@ -552,7 +563,10 @@ const DdzGame = {
     this.selectedIndex = [];
     this.gameState = "calling";
     this.lastParsed = null;
+    this.lastOutCards = [];
     this.turn = 0;
+    // 自动排序手牌
+    this.myCards = CardUtil.sortCards(this.myCards);
     this.renderAll();
     AudioMgr.playTone("deal");
     AudioMgr.speak("发牌");
@@ -562,6 +576,25 @@ const DdzGame = {
     document.querySelector("#outBtn").style.display="none";
     document.querySelector("#passBtn").style.display="none";
     this.showMsg("请叫地主");
+  },
+
+  //渲染桌面打出的牌
+  renderOutCards(){
+    const area = document.querySelector("#gameArea");
+    //清除旧的出牌
+    area.querySelectorAll(".card-out").forEach(d=>d.remove());
+    if(this.lastOutCards.length===0) return;
+    const centerX = area.clientWidth / 2 - (this.lastOutCards.length * 32)/2;
+    const centerY = area.clientHeight / 2 - 40;
+    this.lastOutCards.forEach((c,idx)=>{
+      const div = document.createElement("div");
+      div.className = "card-out";
+      div.style.left = (centerX + idx*32)+"px";
+      div.style.top = centerY+"px";
+      let colorCls = (c.v==="2"||c.v==="A"||c.v==="BJ"||c.v==="SJ")?"text-red-600":"text-black";
+      div.innerHTML = `<div class="p-1 ${colorCls} text-sm">${c.text}</div>`;
+      area.appendChild(div);
+    })
   },
 
   renderAll(){
@@ -605,6 +638,7 @@ const DdzGame = {
       d.style.top = (120+i*14)+"px";
       area.appendChild(d);
     }
+    this.renderOutCards();
   },
 
   callLandlord(isRob){
@@ -615,6 +649,8 @@ const DdzGame = {
       this.landlordSeat = 0;
       this.isLandlord = true;
       this.myCards.push(...this.landCards);
+      //拿到地主底牌后重新排序
+      this.myCards = CardUtil.sortCards(this.myCards);
       AudioMgr.speak("抢地主");
       this.showMsg("你成为地主！轮到你出牌");
       this.turn = 0;
@@ -635,6 +671,7 @@ const DdzGame = {
     }
     this.gameState = "playing";
     this.lastParsed = null;
+    this.lastOutCards = [];
     this.renderAll();
     document.querySelector("#outBtn").style.display="block";
     document.querySelector("#passBtn").style.display="block";
@@ -654,12 +691,20 @@ const DdzGame = {
       if(canPlay){
         AudioMgr.speak("出牌");
         self.showMsg("对手出牌");
-        //AI随便打第一张单张
-        self.lastParsed = CardUtil.parseCards([{v:"3"}]);
+        //AI随便打第一张牌
+        let aiCard;
+        if(self.turn===1){
+          aiCard = self.leftCards.shift();
+        }else{
+          aiCard = self.rightCards.shift();
+        }
+        self.lastOutCards = [aiCard];
+        self.lastParsed = CardUtil.parseCards([aiCard]);
       }else{
         AudioMgr.speak("不出");
         self.showMsg("对手不出");
       }
+      self.renderAll();
       //轮换到玩家
       self.turn = 0;
       self.showMsg("轮到你出牌");
@@ -697,6 +742,7 @@ const DdzGame = {
     this.myCards = keep;
     this.selectedIndex = [];
     this.lastParsed = curParse;
+    this.lastOutCards = selectedCards;
     this.renderAll();
 
     if(this.myCards.length===0){
