@@ -36,9 +36,9 @@
         .mahjong-tile{
             width: clamp(36px,8vw,54px);
             height: clamp(48px,11vw,70px);
-            background:linear-gradient(160deg,#fff,#e8e8e8);
+            background:linear-gradient(160deg,#fff,#f8f8f8);
             border-radius:6px;
-            border:1px solid #999;
+            border:1px solid #aaa;
             display:flex;
             align-items:center;
             justify-content:center;
@@ -49,6 +49,12 @@
             user-select:none;
             transition:0.15s;
         }
+        /* 万子红色 */
+        .mahjong-tile.wan{ color:#b82626; }
+        /* 条子绿色 */
+        .mahjong-tile.tiao{ color:#0E5138; }
+        /* 筒子蓝色 */
+        .mahjong-tile.tong{ color:#194b9c; }
         .mahjong-tile:hover{transform:translateY(-6px);}
         .mahjong-tile.back{
             background:linear-gradient(160deg,#0E5138,#093826);
@@ -355,7 +361,11 @@ function refreshGameUI(){
     myDom.innerHTML="";
     gameState.hands[0].forEach((tid,idx)=>{
         const div = document.createElement("div");
-        div.className="mahjong-tile";
+        let cls = "mahjong-tile";
+        if(tid <=8) cls += " wan";
+        else if(tid <=17) cls += " tiao";
+        else cls += " tong";
+        div.className=cls;
         div.innerText = tileNames[tid];
         div.onclick=()=>playerPlayCard(idx);
         myDom.appendChild(div);
@@ -366,7 +376,11 @@ function refreshGameUI(){
     gameState.desk.forEach(playerDesk=>{
         playerDesk.forEach(tid=>{
             const d = document.createElement("span");
-            d.className="mahjong-tile";
+            let cls = "mahjong-tile";
+            if(tid <=8) cls += " wan";
+            else if(tid <=17) cls += " tiao";
+            else cls += " tong";
+            d.className=cls;
             d.style.width="34px";d.style.height="44px";
             d.innerText=tileNames[tid];
             deskDom.appendChild(d);
@@ -472,7 +486,7 @@ function aiTurn(pIndex){
 
 //简易胡牌检测（简化版，仅演示）
 function checkHu(hand){
-    //本示例是简易演示算法；完整麻将胡牌逻辑较复杂，这里做简化模拟
+    //本示例是简易演示算法；真实商用麻将需要重写完整复杂的麻将组合判定逻辑
     //随机概率模拟是否可胡，方便演示功能
     const rand = Math.random();
     return rand<0.08;
